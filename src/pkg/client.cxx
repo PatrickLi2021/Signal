@@ -36,21 +36,44 @@ Client::Client(std::shared_ptr<NetworkDriver> network_driver,
 void Client::prepare_keys(CryptoPP::DH DH_obj,
                           CryptoPP::SecByteBlock DH_private_value,
                           CryptoPP::SecByteBlock DH_other_public_value) {
-  // TODO: implement me!
+  CryptoPP::SecByteBlock shared_key = crypto_driver->DH_generate_shared_key(DH_obj, DH_private_value, DH_other_public_value); // this is s in the diagram on page 4
+  this->AES_key = crypto_driver->AES_generate_key(shared_key);
+  this->HMAC_key = crypto_driver->HMAC_generate_key(shared_key);
 }
 
 /**
  * Encrypts the given message and returns a Message struct. This function
  * should:
- * 1) Check if the DH Ratchet keys need to change; if so, update them.
+ * 1) Check if the DH Ratchet keys need to change (i.e. the direction of communication 
+ * changes, like Bob now sends a message to Alice); if so, update them.
+
  * 2) Encrypt and tag the message.
  */
 Message_Message Client::send(std::string plaintext) {
   // Grab the lock to avoid race conditions between the receive and send threads
   // Lock will automatically release at the end of the function.
   std::unique_lock<std::mutex> lck(this->mtx);
+  
+  // It is my first time sending, so I need to initialize new DH Ratchet keys
+  if (DH_switched == true) {
+    auto [dh, privateKey, publicKey] = crypto_driver->DH_initialize(DH_params);
+    prepare_keys(dh, publicKey, privateKey); 
+    this->DH_current_public_value = publicKey;
+    this->DH_current_private_value = privateKey;
+    this->DH_switched = false;
+  } 
+  
+  // I have been sending messages, so we don't generate new keys
+  auto [ciphertext, iv] = crypto_driver->AES_encrypt(this->AES_key, plaintext);
+  std::string mac = crypto_driver->HMAC_generate(this->HMAC_key, concat_msg_fields(iv, this->DH_current_public_value, ciphertext));
 
-  // TODO: implement me!
+  // Return new message struct
+  Message_Message msg;
+  msg.iv = iv;
+  msg.public_value = this->DH_current_public_value;
+  msg.ciphertext = ciphertext;
+  msg.mac = mac;
+  return msg;
 }
 
 /**
@@ -63,8 +86,17 @@ std::pair<std::string, bool> Client::receive(Message_Message msg) {
   // Grab the lock to avoid race conditions between the receive and send threads
   // Lock will automatically release at the end of the function.
   std::unique_lock<std::mutex> lck(this->mtx);
-
-  // TODO: implement me!
+  // DH_current_public_value is Bob's current public value
+  // DH_last_other_public_value is Alice's last sent public value
+  if (msg.public_value != this->DH_last_other_public_value) {
+    auto [dh, privateValue, publicValue] = crypto_driver->DH_initialize(DH_params);
+    prepare_keys(dh, publicValue, privateValue); 
+  }
+  // Verify MAC
+  bool valid = crypto_driver->HMAC_verify(this->HMAC_key, msg.ciphertext, msg.mac);
+  // Decrypt message
+  std::string decrypted_message = crypto_driver->AES_decrypt(AES_key, msg.iv, msg.ciphertext);
+  return std::make_pair(decrypted_message, valid);
 }
 
 /**
@@ -92,12 +124,54 @@ void Client::run(std::string command) {
  * `command` can be either "listen" or "connect"; the listener should `read()`
  * for params, and the connector should generate and send params.
  * 2) Initialize DH object and keys
- * 3) Send your public value
- * 4) Listen for the other party's public value
+ * 3) Send your public value. This should be the public value message
+ * 4) Listen for the other party's public value. This should be their public value message that you're listening for
  * 5) Generate DH, AES, and HMAC keys and set local variables
+
+ use public value message somewhere in here
  */
 void Client::HandleKeyExchange(std::string command) {
-  // TODO: implement me!
+  DH_switched = true;
+  DHParams_Message dh_params;
+  if (command == "listen") {
+    std::vector<unsigned char> read_data = this->network_driver->read();
+    dh_params.deserialize(read_data); // struct is now filled
+    }
+  else if (command == "connect") {
+    DHParams_Message msg = this->crypto_driver->DH_generate_params();
+    std::vector<unsigned char> data;
+    msg.serialize(data);
+    // this->network_driver->send(msg);
+  }
+  this->DH_params = dh_params;
+  auto [dh, privateValue, publicValue] = crypto_driver->DH_initialize(DH_params);
+  PublicValue_Message p_message;
+  p_message.public_value = publicValue;
+  std::vector<unsigned char> serialized_data;
+  p_message.serialize(serialized_data);
+  // this->network_driver->send(p_message);
+
+  // listen
+
+    // call initialize
+
+    // call prepare keys to set up keys
+    // send over a public value message. In this part, we send 2 messages. 
+    // send DH_params
+    // both people send over their public value and listen for the other public value as well
+    // you don't have to worry about setting up communciation here
+    // All we have to do in this function is send and read messages from each of the two parts
+    // We use send() and read() in metwork driver
+    // set dh-current-value and dh-current-private value
+    // set DH_switched == true
+  std::tuple<DH, SecByteBlock, SecByteBlock> new_pair = crypto_driver->DH_initialize(DH_params);
+  // DH DH_obj = std::get<0>(new_pair));
+  SecByteBlock new_public_value = std::get<1>(new_pair);
+  // send public key and listen for their public key
+  // ratchet
+  // SecByteBlock new_private_value = std::get<2>(new_pair));
+  // listen for the other person's public value and send the public
+
 }
 
 /**

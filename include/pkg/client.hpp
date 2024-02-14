@@ -44,7 +44,7 @@ private:
 
   // DH Ratchet Fields
   DHParams_Message DH_params;
-  bool DH_switched;
+  bool DH_switched; // do i need to update the current public value and last other rpublic value fields
   SecByteBlock DH_current_private_value;
   SecByteBlock DH_current_public_value;
   SecByteBlock DH_last_other_public_value;

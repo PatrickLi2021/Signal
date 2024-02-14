@@ -104,7 +104,6 @@ SecByteBlock CryptoDriver::AES_generate_key(const SecByteBlock &DH_shared_key) {
 std::pair<std::string, SecByteBlock>
 CryptoDriver::AES_encrypt(SecByteBlock key, std::string plaintext) {
   try {
-    // TODO: implement me!
     std::string cipherText;
     CBC_Mode<AES>::Encryption enc;
     SecByteBlock iv(AES::BLOCKSIZE);
