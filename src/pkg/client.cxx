@@ -140,7 +140,7 @@ void Client::HandleKeyExchange(std::string command) {
   else if (command == "connect") {
     this->DH_params = this->crypto_driver->DH_generate_params();
     std::vector<unsigned char> data;
-    this->DH_params->serialize(data);
+    this->DH_params.serialize(data);
     this->network_driver->send(data);
   }
   else {
