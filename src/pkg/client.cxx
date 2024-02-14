@@ -141,7 +141,7 @@ void Client::HandleKeyExchange(std::string command) {
     DHParams_Message msg = this->crypto_driver->DH_generate_params();
     std::vector<unsigned char> data;
     msg.serialize(data);
-    // this->network_driver->send(msg);
+    this->network_driver->send(data);
   }
   this->DH_params = dh_params;
   auto [dh, privateValue, publicValue] = crypto_driver->DH_initialize(DH_params);
@@ -149,7 +149,7 @@ void Client::HandleKeyExchange(std::string command) {
   p_message.public_value = publicValue;
   std::vector<unsigned char> serialized_data;
   p_message.serialize(serialized_data);
-  // this->network_driver->send(p_message);
+  this->network_driver->send(serialized_data);
 
   // listen
 

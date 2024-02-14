@@ -19,13 +19,10 @@ DHParams_Message CryptoDriver::DH_generate_params() {
   CryptoPP::AutoSeededRandomPool prng;
   CryptoPP::PrimeAndGenerator pg;
   pg.Generate(1, prng, 512, 511);
-  CryptoPP::Integer p = pg.Prime();
-  CryptoPP::Integer q = pg.SubPrime();
-  CryptoPP::Integer g = pg.Generator();
   DHParams_Message message;
-  message.p = p;
-  message.q = q;
-  message.g = g;
+  message.p = pg.Prime();
+  message.q = pg.SubPrime();
+  message.g = pg.Generator();
   return message;
 }
 
@@ -39,7 +36,7 @@ DHParams_Message CryptoDriver::DH_generate_params() {
  */
 std::tuple<DH, SecByteBlock, SecByteBlock>
 CryptoDriver::DH_initialize(const DHParams_Message &DH_params) {
-  DH DH_obj;
+  DH DH_obj(DH_params.p, DH_params.q, DH_params.g);
   CryptoPP::AutoSeededRandomPool rng;
   SecByteBlock private_key(DH_obj.PrivateKeyLength());
   SecByteBlock public_key(DH_obj.PublicKeyLength());
@@ -139,7 +136,6 @@ std::string CryptoDriver::AES_decrypt(SecByteBlock key, SecByteBlock iv,
     CBC_Mode<AES>::Decryption dec;
     CryptoPP::AutoSeededRandomPool prng;
     std::string plaintext;
-    dec.GetNextIV(prng, iv);
     dec.SetKeyWithIV(key, key.size(), iv);
     CryptoPP::StringSource ss(ciphertext, true, new CryptoPP::StreamTransformationFilter(dec, new CryptoPP::StringSink(plaintext)));
     return plaintext;
