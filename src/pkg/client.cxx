@@ -131,6 +131,7 @@ void Client::run(std::string command) {
  use public value message somewhere in here
  */
 void Client::HandleKeyExchange(std::string command) {
+  this->DH_switched = true;
   DHParams_Message dh_params;
   if (command == "listen") {
     auto read_data = this->network_driver->read();
