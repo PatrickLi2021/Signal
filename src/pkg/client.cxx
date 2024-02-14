@@ -138,10 +138,13 @@ void Client::HandleKeyExchange(std::string command) {
     dh_params.deserialize(read_data); 
   }
   else if (command == "connect") {
-    DHParams_Message msg = this->crypto_driver->DH_generate_params();
+    this->DH_params = this->crypto_driver->DH_generate_params();
     std::vector<unsigned char> data;
-    msg.serialize(data);
+    this->DH_params->serialize(data);
     this->network_driver->send(data);
+  }
+  else {
+    throw std::runtime_error("Invalid command.");
   }
 
   this->DH_params = dh_params;
