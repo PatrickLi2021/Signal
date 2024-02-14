@@ -131,7 +131,6 @@ void Client::run(std::string command) {
  use public value message somewhere in here
  */
 void Client::HandleKeyExchange(std::string command) {
-  DH_switched = true;
   DHParams_Message dh_params;
   if (command == "listen") {
     auto read_data = this->network_driver->read();
@@ -158,24 +157,14 @@ void Client::HandleKeyExchange(std::string command) {
   this->network_driver->send(serialized_data);
 
   // Listen for other party's public value
+  PublicValue_Message second_message;
   auto read_msg = this->network_driver->read();
-  p_message.deserialize(read_msg); 
-  this->DH_last_other_public_value = p_message.public_value;
+  second_message.deserialize(read_msg); 
+  this->DH_last_other_public_value = second_message.public_value;
 
   // Generate DH, AES, and HMAC keys and set local variables
-  this->prepare_keys(dh, this->DH_current_private_value, this->DH_current_public_value);
+  this->prepare_keys(dh, this->DH_current_private_value, this->DH_last_other_public_value);
 
-
-
-
-
-
-
-    // send DH_params
-    // both people send over their public value and listen for the other public value as well
-    // All we have to do in this function is send and read messages from each of the two parts
-    // set dh-current-value and dh-current-private value
-    // set DH_switched == true
 }
 
 /**
