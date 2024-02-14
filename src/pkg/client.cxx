@@ -147,7 +147,6 @@ void Client::HandleKeyExchange(std::string command) {
     throw std::runtime_error("Invalid command.");
   }
 
-  this->DH_params = dh_params;
   DH DH_obj(dh_params.p, dh_params.q, dh_params.g);
   auto [dh, privateValue, publicValue] = crypto_driver->DH_initialize(this->DH_params);
   this->DH_current_private_value = privateValue;
