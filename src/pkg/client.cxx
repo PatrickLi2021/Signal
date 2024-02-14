@@ -125,7 +125,7 @@ void Client::run(std::string command) {
  * for params, and the connector should generate and send params.
  * 2) Initialize DH object and keys
  * 3) Send your public value. 
- * 4) Listen for the other party's public value. This should be their public value message that you're listening for
+ * 4) Listen for the other party's public value.
  * 5) Generate DH, AES, and HMAC keys and set local variables
 
  use public value message somewhere in here
@@ -133,22 +133,22 @@ void Client::run(std::string command) {
 void Client::HandleKeyExchange(std::string command) {
   DH_switched = true;
   DHParams_Message dh_params;
-  // Read in the values sent over
   if (command == "listen") {
     auto read_data = this->network_driver->read();
     dh_params.deserialize(read_data); 
   }
-  // Generate the parameters and send them to the listener
   else if (command == "connect") {
     DHParams_Message msg = this->crypto_driver->DH_generate_params();
     std::vector<unsigned char> data;
     msg.serialize(data);
     this->network_driver->send(data);
   }
+
   this->DH_params = dh_params;
-  // Both parties send their public value and listen for the other public value
   DH DH_obj(dh_params.p, dh_params.q, dh_params.g);
-  auto [dh, privateValue, publicValue] = crypto_driver->DH_initialize(DH_params);
+  auto [dh, privateValue, publicValue] = crypto_driver->DH_initialize(this->DH_params);
+  this->DH_current_private_value = privateValue;
+  this->DH_current_public_value = publicValue;
   
   // Send public value
   PublicValue_Message p_message;
@@ -160,10 +160,10 @@ void Client::HandleKeyExchange(std::string command) {
   // Listen for other party's public value
   auto read_msg = this->network_driver->read();
   p_message.deserialize(read_msg); 
-  this->DH_current_public_value = p_message.public_value;
+  this->DH_last_other_public_value = p_message.public_value;
 
   // Generate DH, AES, and HMAC keys and set local variables
-  prepare_keys(DH_obj, this->DH_current_private_value, this->DH_current_public_value);
+  this->prepare_keys(dh, this->DH_current_private_value, this->DH_current_public_value);
 
 
 
