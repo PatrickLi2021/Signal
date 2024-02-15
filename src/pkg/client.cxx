@@ -90,14 +90,16 @@ std::pair<std::string, bool> Client::receive(Message_Message msg) {
   // DH_last_other_public_value is Alice's last sent public value
 
   if (msg.public_value != this->DH_last_other_public_value) {
+    DH dh(this->DH_params.p, this->DH_params.q, this->DH_params.g);
+    // auto [dh, privateValue, publicValue] = crypto_driver->DH_initialize(this->DH_params);
     this->DH_last_other_public_value = msg.public_value;
-    auto [dh, privateValue, publicValue] = crypto_driver->DH_initialize(this->DH_params);
-    this->prepare_keys(dh, privateValue, this->DH_last_other_public_value); 
+    this->prepare_keys(dh, this->DH_current_private_value, this->DH_last_other_public_value); 
+    this->DH_switched = true;
   }
   // Verify MAC
   bool valid = crypto_driver->HMAC_verify(this->HMAC_key, concat_msg_fields(msg.iv, msg.public_value, msg.ciphertext), msg.mac);
   // Decrypt message
-  std::string decrypted_message = crypto_driver->AES_decrypt(AES_key, msg.iv, msg.ciphertext);
+  std::string decrypted_message = crypto_driver->AES_decrypt(this->AES_key, msg.iv, msg.ciphertext);
   return std::make_pair(decrypted_message, valid);
 }
 
