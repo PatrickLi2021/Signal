@@ -95,7 +95,7 @@ std::pair<std::string, bool> Client::receive(Message_Message msg) {
     this->prepare_keys(dh, privateValue, this->DH_last_other_public_value); 
   }
   // Verify MAC
-  bool valid = crypto_driver->HMAC_verify(this->HMAC_key, msg.ciphertext, msg.mac);
+  bool valid = crypto_driver->HMAC_verify(this->HMAC_key, concat_msg_fields(msg.iv, msg.public_value, msg.ciphertext), msg.mac);
   // Decrypt message
   std::string decrypted_message = crypto_driver->AES_decrypt(AES_key, msg.iv, msg.ciphertext);
   return std::make_pair(decrypted_message, valid);
