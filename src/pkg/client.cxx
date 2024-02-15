@@ -133,7 +133,6 @@ void Client::run(std::string command) {
  use public value message somewhere in here
  */
 void Client::HandleKeyExchange(std::string command) {
-  // xTODO: implement me!
   this->DH_switched = true;
   if (command == "listen") {
     std::vector<unsigned char> params = this->network_driver->read();
@@ -148,25 +147,21 @@ void Client::HandleKeyExchange(std::string command) {
   else {
     throw std::runtime_error("bad command");
   }
-  // 2
   std::tuple<DH, SecByteBlock, SecByteBlock> initial = this->crypto_driver->DH_initialize(this->DH_params);
   this->DH_current_private_value = std::get<1>(initial);
   this->DH_current_public_value = std::get<2>(initial);
 
-  // 3
   PublicValue_Message pv;
   pv.public_value = this->DH_current_public_value;
   std::vector<unsigned char> data;
   pv.serialize(data);
   this->network_driver->send(data);
 
-  // 4
   PublicValue_Message pv_2;
   std::vector<unsigned char> public_val = this->network_driver->read();
   pv_2.deserialize(public_val);
   this->DH_last_other_public_value = pv_2.public_value;
 
-  // 5
   this->prepare_keys(std::get<0>(initial), this->DH_current_private_value, this->DH_last_other_public_value);
 }
 
