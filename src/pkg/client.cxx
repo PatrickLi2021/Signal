@@ -133,11 +133,11 @@ void Client::run(std::string command) {
  use public value message somewhere in here
  */
 void Client::HandleKeyExchange(std::string command) {
+  // xTODO: implement me!
   this->DH_switched = true;
-  DHParams_Message dh_params;
   if (command == "listen") {
-    auto read_data = this->network_driver->read();
-    this->DH_params.deserialize(read_data); 
+    std::vector<unsigned char> params = this->network_driver->read();
+    this->DH_params.deserialize(params);
   }
   else if (command == "connect") {
     this->DH_params = this->crypto_driver->DH_generate_params();
@@ -146,30 +146,28 @@ void Client::HandleKeyExchange(std::string command) {
     this->network_driver->send(data);
   }
   else {
-    throw std::runtime_error("Invalid command.");
+    throw std::runtime_error("bad command");
   }
+  // 2
+  std::tuple<DH, SecByteBlock, SecByteBlock> initial = this->crypto_driver->DH_initialize(this->DH_params);
+  this->DH_current_private_value = std::get<1>(initial);
+  this->DH_current_public_value = std::get<2>(initial);
 
-  this->DH_params = dh_params;
-  DH DH_obj(dh_params.p, dh_params.q, dh_params.g);
-  auto [dh, privateValue, publicValue] = crypto_driver->DH_initialize(this->DH_params);
-  this->DH_current_private_value = privateValue;
-  this->DH_current_public_value = publicValue;
-  
-  // Send public value
-  PublicValue_Message p_message;
-  p_message.public_value = this->DH_current_public_value;
-  std::vector<unsigned char> serialized_data;
-  p_message.serialize(serialized_data);
-  this->network_driver->send(serialized_data);
+  // 3
+  PublicValue_Message pv;
+  pv.public_value = this->DH_current_public_value;
+  std::vector<unsigned char> data;
+  pv.serialize(data);
+  this->network_driver->send(data);
 
-  // Listen for other party's public value
-  PublicValue_Message second_message;
-  auto read_msg = this->network_driver->read();
-  second_message.deserialize(read_msg); 
-  this->DH_last_other_public_value = second_message.public_value;
+  // 4
+  PublicValue_Message pv_2;
+  std::vector<unsigned char> public_val = this->network_driver->read();
+  pv_2.deserialize(public_val);
+  this->DH_last_other_public_value = pv_2.public_value;
 
-  // Generate DH, AES, and HMAC keys and set local variables
-  this->prepare_keys(dh, this->DH_current_private_value, this->DH_last_other_public_value);
+  // 5
+  this->prepare_keys(std::get<0>(initial), this->DH_current_private_value, this->DH_last_other_public_value);
 }
 
 /**
