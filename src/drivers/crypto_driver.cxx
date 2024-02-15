@@ -106,7 +106,7 @@ CryptoDriver::AES_encrypt(SecByteBlock key, std::string plaintext) {
     SecByteBlock iv(AES::BLOCKSIZE);
     CryptoPP::AutoSeededRandomPool prng;
     enc.GetNextIV(prng, iv);
-    enc.SetKeyWithIV(key, SHA256::BLOCKSIZE, iv);
+    enc.SetKeyWithIV(key, key.size(), iv);
     CryptoPP::StringSource ss(plaintext, true, new CryptoPP::StreamTransformationFilter(enc, new CryptoPP::StringSink(cipherText)));
     return std::make_pair(cipherText, iv);
   } catch (CryptoPP::Exception &e) {
@@ -207,7 +207,7 @@ bool CryptoDriver::HMAC_verify(SecByteBlock key, std::string ciphertext,
   const int flags = HashVerificationFilter::THROW_EXCEPTION |
                     HashVerificationFilter::HASH_AT_END;
   try {
-      HMAC<SHA256> hmac(key, SHA256::BLOCKSIZE);
+      HMAC<SHA256> hmac(key, key.size());
       StringSource ss(ciphertext + mac, true, 
         new HashVerificationFilter(hmac, NULL, flags)
       ); // StringSource
