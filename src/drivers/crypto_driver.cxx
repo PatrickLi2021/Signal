@@ -135,7 +135,7 @@ std::string CryptoDriver::AES_decrypt(SecByteBlock key, SecByteBlock iv,
   try {
     CBC_Mode<AES>::Decryption dec;
     std::string plaintext;
-    dec.SetKeyWithIV(key, SHA256::BLOCKSIZE, iv);
+    dec.SetKeyWithIV(key, key.size(), iv);
     CryptoPP::StringSource ss(ciphertext, true, new CryptoPP::StreamTransformationFilter(dec, new CryptoPP::StringSink(plaintext)));
     return plaintext;
   } catch (CryptoPP::Exception &e) {
