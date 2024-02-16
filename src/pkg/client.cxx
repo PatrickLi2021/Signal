@@ -149,22 +149,22 @@ void Client::HandleKeyExchange(std::string command) {
   else {
     throw std::runtime_error("bad command");
   }
-  std::tuple<DH, SecByteBlock, SecByteBlock> initial = this->crypto_driver->DH_initialize(this->DH_params);
-  this->DH_current_private_value = std::get<1>(initial);
-  this->DH_current_public_value = std::get<2>(initial);
+  auto [dh, privateValue, publicValue] = this->crypto_driver->DH_initialize(this->DH_params);
+  this->DH_current_private_value = privateValue;
+  this->DH_current_public_value = publicValue;
 
-  PublicValue_Message pv;
-  pv.public_value = this->DH_current_public_value;
-  std::vector<unsigned char> data;
-  pv.serialize(data);
-  this->network_driver->send(data);
+  PublicValue_Message msg;
+  msg.public_value = this->DH_current_public_value;
+  std::vector<unsigned char> send_data;
+  msg.serialize(send_data);
+  this->network_driver->send(send_data);
 
-  PublicValue_Message pv_2;
+  PublicValue_Message msg_2;
   std::vector<unsigned char> public_val = this->network_driver->read();
-  pv_2.deserialize(public_val);
-  this->DH_last_other_public_value = pv_2.public_value;
+  msg_2.deserialize(public_val);
+  this->DH_last_other_public_value = msg_2.public_value;
 
-  this->prepare_keys(std::get<0>(initial), this->DH_current_private_value, this->DH_last_other_public_value);
+  this->prepare_keys(dh, this->DH_current_private_value, this->DH_last_other_public_value);
 }
 
 /**
